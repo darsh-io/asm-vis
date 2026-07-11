@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pwn Visualizer — Learn Assembly, the Stack &amp; Exploits by Watching</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ============================================================
+     TOP BAR — brand + lesson tabs
+     ============================================================ -->
+<header class="topbar">
+  <div class="brand">🕹️ <span>Pwn Visualizer</span></div>
+  <nav id="lessonNav" class="lesson-nav"></nav>
+</header>
+
+<!-- Beginner-mode intro banner for the active lesson -->
+<div id="lessonIntro" class="lesson-intro"></div>
+
+<main class="app-main">
+
+  <!-- ============================================================
+       SIM VIEW — shared debugger layout for all cpu.js-driven lessons
+       (Registers 101, Stack Basics, Function Calls, Ret2Win, ROP)
+       ============================================================ -->
+  <section id="simView" class="sim-view">
+
+    <!-- LEFT: assembly instruction list -->
+    <div class="panel panel-instr">
+      <div class="panel-title-row">
+        <h2 class="panel-title">🧾 Assembly</h2>
+        <label class="predict-toggle">
+          <input type="checkbox" id="predictToggle" checked />
+          🎯 Predict mode
+        </label>
+      </div>
+      <div id="predictBanner" class="predict-banner hidden"></div>
+      <ol id="instrList" class="instr-list"></ol>
+
+      <div id="gadgetPanel" class="gadget-panel hidden">
+        <h3>🔗 Gadgets in play</h3>
+        <div id="gadgetList" class="gadget-list"></div>
+      </div>
+    </div>
+
+    <!-- CENTER: registers, flags, memory map, explanation, controls -->
+    <div class="panel panel-center">
+      <h2 class="panel-title">🧠 Registers</h2>
+      <div id="regGrid" class="reg-grid"></div>
+
+      <div class="flags-block">
+        <h3>Flags</h3>
+        <div id="flagsRow" class="flags-row">
+          <div class="flag-chip" data-flag="ZF">ZF <small>zero</small></div>
+          <div class="flag-chip" data-flag="SF">SF <small>sign</small></div>
+        </div>
+      </div>
+
+      <div class="explain-box" id="explainBox">
+        <div class="explain-current" id="explainTitle">—</div>
+        <div class="explain-text" id="explainText">Press "Next" to begin.</div>
+        <div class="explain-story hidden" id="explainStory"></div>
+      </div>
+
+      <div class="mem-map">
+        <h3>🗺️ Memory Layout</h3>
+        <div class="mem-strip">
+          <div class="mem-seg" id="memSegCode">Code</div>
+          <div class="mem-seg" id="memSegData">Data</div>
+          <div class="mem-seg" id="memSegHeap">Heap</div>
+          <div class="mem-seg" id="memSegStack">Stack</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="btnRestart" class="ctrl-btn" title="Restart">⏮ Restart</button>
+        <button id="btnPrev" class="ctrl-btn" title="Previous">◀ Prev</button>
+        <button id="btnNext" class="ctrl-btn ctrl-primary" title="Next">Next ▶</button>
+        <button id="btnPlay" class="ctrl-btn" title="Play">▶ Play</button>
+        <button id="btnPause" class="ctrl-btn hidden" title="Pause">⏸ Pause</button>
+      </div>
+      <div class="speed-row">
+        <label for="speedRange">Speed</label>
+        <input type="range" id="speedRange" min="400" max="2200" value="1100" step="100" />
+      </div>
+    </div>
+
+    <!-- RIGHT: animated stack -->
+    <div class="panel panel-stack">
+      <h2 class="panel-title">📚 Stack</h2>
+      <div id="stackWrap" class="stack-wrap">
+        <div class="arrow-rail">
+          <div id="rbpArrow" class="ptr-arrow rbp-arrow hidden">RBP</div>
+          <div id="rspArrow" class="ptr-arrow rsp-arrow hidden">RSP</div>
+        </div>
+        <div id="stackTrack" class="stack-track"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       BUFFER OVERFLOW LAB — interactive typing view
+       ============================================================ -->
+  <section id="overflowView" class="lab-view hidden">
+    <div class="lab-card">
+      <p class="lab-copy">
+        <code>char buffer[32];</code> lives on the stack, right below <b>Saved RBP</b> and the
+        <b>Return Address</b>. Type below. Keep typing past 32 characters and watch what happens.
+      </p>
+      <input id="ofInput" class="of-input" type="text" placeholder="Type here… try more than 48 characters" autocomplete="off" />
+      <div class="of-toolbar">
+        <button id="ofFillBtn" class="ctrl-btn">Fill with A's (56×)</button>
+        <button id="ofResetBtn" class="ctrl-btn">↺ Reset</button>
+        <button id="ofRetBtn" class="ctrl-btn ctrl-primary">Execute RET ▶</button>
+      </div>
+      <div id="ofCount" class="of-count">0/32 bytes in buffer</div>
+      <div id="ofZoneLabels" class="of-zone-labels"></div>
+      <div id="ofGrid" class="of-grid"></div>
+      <div id="ofStatus" class="of-status"></div>
+      <div id="ofRip" class="rip-box">
+        <div class="rip-name">RIP after RET</div>
+        <div class="rip-value">0x0000000000000000</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PIE LAB
+       ============================================================ -->
+  <section id="pieView" class="lab-view hidden">
+    <div class="lab-card">
+      <p class="lab-copy">Every run, the OS loads this binary at a random base address (ASLR + PIE). Leak one address, then do the math.</p>
+      <div id="pieBody" class="pie-body"></div>
+      <div id="pieStatus" class="pie-status"></div>
+      <div class="of-toolbar">
+        <button id="pieResetBtn" class="ctrl-btn">↺ New random base</button>
+        <button id="pieNextBtn" class="ctrl-btn ctrl-primary">Leak an address</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       POINTER VISUALIZER
+       ============================================================ -->
+  <section id="pointerView" class="lab-view hidden">
+    <div class="lab-card">
+      <p class="lab-copy"><code>int x = 5; int *p = &amp;x;</code> — <b>p does not store 5</b>. It stores the ADDRESS of the box that stores 5.</p>
+      <div id="ptrStage" class="ptr-stage">
+        <div id="ptrArrow" class="ptr-line"></div>
+        <div id="ptrRow" class="ptr-row"></div>
+      </div>
+      <div class="of-toolbar">
+        <button id="ptrToX" class="ctrl-btn">Point p at x</button>
+        <button id="ptrToY" class="ctrl-btn">Point p at y instead</button>
+        <button id="ptrResetBtn" class="ctrl-btn">↺ Reset</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script src="cpu.js"></script>
+<script src="animations.js"></script>
+<script src="lessons.js"></script>
+<script src="ui.js"></script>
+<script src="bufferlab.js"></script>
+<script src="pointerlab.js"></script>
+<script src="pielab.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
