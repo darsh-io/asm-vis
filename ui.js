@@ -112,6 +112,7 @@ class SimulatorView {
   // ---------------------------------------------------------- gadgets (ROP)
   buildGadgetPanel() {
     const gadgetInstrs = this.sim.program.filter((i) => i.gadget);
+    this.gadgetCards = new Map(); // gadget-tag -> card element, for live highlighting
     if (!gadgetInstrs.length) {
       this.el.gadgetPanel.classList.add("hidden");
       return;
@@ -119,14 +120,45 @@ class SimulatorView {
     this.el.gadgetPanel.classList.remove("hidden");
     const seen = new Set();
     this.el.gadgetList.innerHTML = "";
-    gadgetInstrs.forEach((ins) => {
-      if (seen.has(ins.gadget)) return;
-      seen.add(ins.gadget);
+    // Sort by gadgetOrder so the panel always reads top-to-bottom as the
+    // chain actually executes, even if instructions were interleaved.
+    const ordered = gadgetInstrs
+      .filter((ins) => !seen.has(ins.gadget) && seen.add(ins.gadget))
+      .sort((a, b) => (a.gadgetOrder || 0) - (b.gadgetOrder || 0));
+
+    ordered.forEach((ins, i) => {
       const card = document.createElement("div");
       card.className = "gadget-card";
-      card.innerHTML = `<code>${escapeHtml(ins.gadget)}</code><p>${escapeHtml(ins.explain)}</p>`;
+      card.innerHTML = `
+        <div class="gadget-card-head">
+          <span class="gadget-step">#${ins.gadgetOrder || i + 1}</span>
+          <code>${escapeHtml(ins.gadget)}</code>
+          ${ins.gadgetEffect ? `<span class="gadget-effect">${escapeHtml(ins.gadgetEffect)}</span>` : ""}
+        </div>
+        <p>${escapeHtml(ins.gadgetPurpose || ins.explain)}</p>`;
       this.el.gadgetList.appendChild(card);
+      this.gadgetCards.set(ins.gadget, card);
+      if (i < ordered.length - 1) {
+        const arrow = document.createElement("div");
+        arrow.className = "gadget-arrow";
+        arrow.textContent = "↓ ret jumps here";
+        this.el.gadgetList.appendChild(arrow);
+      }
     });
+  }
+
+  /** Glow whichever gadget card RIP is currently executing inside. */
+  highlightActiveGadget(state) {
+    if (!this.gadgetCards || !this.gadgetCards.size) return;
+    const ins = this.sim.program[state.pc];
+    this.gadgetCards.forEach((card) => card.classList.remove("active"));
+    if (ins && ins.gadget) {
+      const card = this.gadgetCards.get(ins.gadget);
+      if (card) {
+        card.classList.add("active");
+        card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    }
   }
 
   // ---------------------------------------------------------- stack
@@ -400,6 +432,7 @@ class SimulatorView {
     this.renderStack(state);
     this.renderFlags(state, animateFlags);
     this.renderMemoryMap(state);
+    this.highlightActiveGadget(state);
     const currentIns = this.sim.program[state.pc];
     if (currentIns) this.renderExplain(currentIns);
   }

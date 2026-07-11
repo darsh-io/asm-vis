@@ -103,7 +103,10 @@ const PROGRAM_RET2WIN = [
   I("nop", [], "nop", { explain: "🏆 win() — you redirected execution here!", label: "win" }),
 ];
 
-/* ================= LESSON 5 — ROP Chain ================= */
+/* ================= LESSON 5 — ROP Chain =================
+   Two gadgets chained back-to-back so chaining is actually visible:
+   pop_rdi loads the 1st argument, pop_rsi loads the 2nd, then win()
+   runs with both fully attacker-controlled. */
 const PROGRAM_ROP = [
   I("call", ["rop_vuln"], "call vuln()", { explain: "main() calls the vulnerable function." }),
   I("haltmarker", [], "; end of main()", { explain: "Never reached.", label: "rop_end_main" }),
@@ -116,22 +119,41 @@ const PROGRAM_ROP = [
   }),
   I(
     "overflow",
-    { fill: 0x4141414141414141, chain: ["pop_rdi", "0x1337", "rop_win"] },
+    { fill: 0x4141414141414141, chain: ["pop_rdi", "0x1337", "pop_rsi", "0x1414", "rop_win"] },
     "gets(buffer)  // ← builds a ROP chain!",
     {
-      explain: "The overflow plants a chain of fake return addresses.",
-      story: "Return Address → pop_rdi gadget. Next slot → the value for RDI. Next slot → win().",
+      explain: "The overflow plants a whole CHAIN of fake return addresses.",
+      story:
+        "Return Address → pop_rdi gadget. Next slot → value for RDI. Next slot → pop_rsi gadget. Next slot → value for RSI. Last slot → win().",
     }
   ),
   I("leave", [], "leave", { explain: "Frame torn down; return address is the first gadget." }),
   I("ret", [], "ret", { explain: "Jump into the first gadget instead of the caller." }),
   I("pop", ["rdi"], "pop rdi", {
-    explain: "This gadget loads the next stack value into RDI.",
+    explain: "Gadget: pops the next stack value straight into RDI.",
     label: "pop_rdi",
     gadget: "pop rdi ; ret",
+    gadgetOrder: 1,
+    gadgetEffect: "→ RDI",
+    gadgetPurpose: "Sets the 1st function argument (RDI in the x86-64 calling convention).",
   }),
-  I("ret", [], "ret", { explain: "Gadget's own ret — jump to the NEXT chained address.", gadget: "pop rdi ; ret" }),
-  I("nop", [], "nop", { explain: "🏆 win(rdi) — called with a fully controlled argument!", label: "rop_win" }),
+  I("ret", [], "ret", {
+    explain: "Gadget's own ret — instead of returning to a caller, it jumps to the NEXT chained address.",
+    gadget: "pop rdi ; ret",
+  }),
+  I("pop", ["rsi"], "pop rsi", {
+    explain: "Gadget: pops the next stack value straight into RSI.",
+    label: "pop_rsi",
+    gadget: "pop rsi ; ret",
+    gadgetOrder: 2,
+    gadgetEffect: "→ RSI",
+    gadgetPurpose: "Sets the 2nd function argument (RSI in the x86-64 calling convention).",
+  }),
+  I("ret", [], "ret", {
+    explain: "Gadget's own ret — chains into the FINAL address: win() itself.",
+    gadget: "pop rsi ; ret",
+  }),
+  I("nop", [], "nop", { explain: "🏆 win(rdi, rsi) — called with two fully controlled arguments!", label: "rop_win" }),
 ];
 
 /* ------------------------------------------------------------

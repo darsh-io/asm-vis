@@ -40,7 +40,12 @@
       <ol id="instrList" class="instr-list"></ol>
 
       <div id="gadgetPanel" class="gadget-panel hidden">
-        <h3>🔗 Gadgets in play</h3>
+        <h3>🔗 What's a gadget?</h3>
+        <div class="gadget-101">
+          <p><b>A gadget is a couple of instructions already sitting in the program, ending in <code>ret</code>.</b> No new code gets injected — you just point RIP at bits of code that already exist.</p>
+          <p>Each gadget's own <code>ret</code> doesn't return to a caller — it pops the <i>next</i> address YOU planted on the stack and jumps there. That's how gadgets chain into a tiny program.</p>
+        </div>
+        <h3>Gadget chain in this exploit</h3>
         <div id="gadgetList" class="gadget-list"></div>
       </div>
     </div>
