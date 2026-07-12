@@ -47,6 +47,7 @@
 
     if (lesson.kind === "vm") {
       views.vm.classList.remove("hidden");
+      leaveSandboxUI(); // in case Sandbox left the editor showing / instrList hidden
       sim = new Simulator(lesson.program);
       view = new SimulatorView(sim, lesson);
       view.predictMode = document.getElementById("predictToggle").checked;
@@ -191,6 +192,18 @@
       })
       .join("");
     el.dataset.built = "1";
+  }
+
+  /** Restore panel-instr to its normal (non-sandbox) look. Shared markup
+   *  lives inside #simView, so any lesson that reuses that view must
+   *  undo whatever edit/run state Sandbox left behind. */
+  function leaveSandboxUI() {
+    document.getElementById("simView").classList.remove("sandbox-idle");
+    document.getElementById("asmEditorPanel").classList.add("hidden");
+    document.getElementById("instrList").classList.remove("hidden");
+    document.getElementById("asmEditBtn").classList.add("hidden");
+    document.querySelector(".controls").classList.remove("hidden");
+    document.querySelector(".speed-row").classList.remove("hidden");
   }
 
   function enterSandboxEditMode() {
