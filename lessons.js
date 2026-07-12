@@ -232,4 +232,12 @@ const LESSONS = [
     subtitle: "A pointer stores an ADDRESS, not a value",
     intro: "int x = 5; int *p = &x; — p doesn't hold 5. It holds the ADDRESS of the box that holds 5.",
   },
+  {
+    id: "sandbox",
+    kind: "sandbox",
+    icon: "⌨️",
+    title: "Sandbox",
+    subtitle: "Write your own assembly",
+    intro: "Type instructions, hit Assemble, then step through and watch the registers and stack react exactly like every other lesson.",
+  },
 ];
