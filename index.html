@@ -31,12 +31,30 @@
     <div class="panel panel-instr">
       <div class="panel-title-row">
         <h2 class="panel-title">🧾 Assembly</h2>
-        <label class="predict-toggle">
-          <input type="checkbox" id="predictToggle" checked />
-          🎯 Predict mode
-        </label>
+        <div class="panel-title-actions">
+          <button id="asmEditBtn" class="edit-code-btn hidden">✏️ Edit code</button>
+          <label class="predict-toggle">
+            <input type="checkbox" id="predictToggle" checked />
+            🎯 Predict mode
+          </label>
+        </div>
       </div>
       <div id="predictBanner" class="predict-banner hidden"></div>
+
+      <!-- SANDBOX ONLY: free-typing editor, swapped for #instrList once assembled -->
+      <div id="asmEditorPanel" class="asm-editor-panel hidden">
+        <textarea id="asmEditor" class="asm-editor" spellcheck="false"></textarea>
+        <div id="asmErrors" class="asm-errors hidden"></div>
+        <div class="of-toolbar">
+          <button id="asmAssembleBtn" class="ctrl-btn ctrl-primary">Assemble ▶</button>
+          <button id="asmResetBtn" class="ctrl-btn">↺ Reset template</button>
+        </div>
+        <details class="asm-cheatsheet">
+          <summary>📖 Supported instructions</summary>
+          <div id="asmCheatList" class="asm-cheat-list"></div>
+        </details>
+      </div>
+
       <ol id="instrList" class="instr-list"></ol>
 
       <div id="gadgetPanel" class="gadget-panel hidden">
